@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Server Updates</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        #result {
+            margin: 20px auto;
+            max-width: 600px;
+        }
+
+        .update-card {
+            background-color: #fff;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease;
+        }
+
+        .update-card:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        .update-card:nth-child(odd) {
+            background-color: #e3f2fd;
+        }
+
+        .update-card.new-data {
+            animation: highlight 30s ease;
+        }
+
+        @keyframes highlight {
+            0% {
+                background-color: #ffd83b; /* Highlight color (yellow) */
+            }
+            100% {
+                background-color: inherit; /* Revert to normal background color */
+            }
+        }
+
+        .update-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .timestamp {
+            font-size: 0.9em;
+            color: #777;
+            text-align: right;
+        }
+
+        .update-content {
+            font-size: 1.1em;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Getting Server Updates</h1>
+<div id="result"></div>
+
+<script>
+let lastTimestamp = '1970-01-01 00:00:00'; 
+
+function startEventSource() {
+    console.log("Connecting with lastTimestamp:", lastTimestamp);
+    const source = new EventSource("sse.php?lastTimestamp=" + encodeURIComponent(lastTimestamp));
+    
+    source.onmessage = function(event) {
+        const mydata = JSON.parse(event.data);
+        if (mydata.lastTimestamp) {
+            lastTimestamp = mydata.lastTimestamp; 
+            console.log("Updated lastTimestamp:", lastTimestamp);
+        } else if (Object.keys(mydata).length > 0) {
+            // Create a new update card
+            const newCard = document.createElement("div");
+            newCard.classList.add("update-card", "new-data");
+
+            // Add content to the update card
+            const updateContent = document.createElement("div");
+            updateContent.classList.add("update-content");
+            updateContent.textContent = JSON.stringify(mydata);
+
+            const timestamp = document.createElement("div");
+            timestamp.classList.add("timestamp");
+            timestamp.textContent = "Timestamp: " + new Date().toLocaleString();
+
+            newCard.appendChild(updateContent);
+            newCard.appendChild(timestamp);
+            
+            // Insert the card at the top
+            document.getElementById("result").insertBefore(newCard, document.getElementById("result").firstChild);
+
+            // Remove the highlight class after the animation ends (2 seconds)
+            setTimeout(() => {
+                newCard.classList.remove("new-data");
+            }, 2000);
+        }
+    };
+    
+    source.onerror = function(event) {
+        console.error("EventSource error:", event);
+        source.close(); 
+        setTimeout(startEventSource, 5000);
+    };
+}
+startEventSource();
+</script>
+
+</body>
+</html>
